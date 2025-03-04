@@ -1,3 +1,6 @@
-To get started: 
-npm install 
+To run locally:
+
+```
+npm install
 npm run dev
+```
