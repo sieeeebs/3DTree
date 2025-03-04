@@ -26,6 +26,7 @@ export default function createBranches({
     new THREE.Matrix4().makeRotationZ(
       rotationAngle
     );
+
   const rotatedDirection = parentDirection
     .clone()
     .applyMatrix4(rotationMatrix)

@@ -1,4 +1,4 @@
-import useStore from "../useStore";
+import useStore from "../../useStore";
 import { Line } from "@react-three/drei";
 
 const CustomBranch = () => {
@@ -6,10 +6,7 @@ const CustomBranch = () => {
   return lines.map((line, index) => (
     <Line
       key={`${line.endPoint}-${index}`}
-      points={[
-        line.startPoint.toArray(),
-        line.endPoint.toArray(),
-      ]}
+      points={[line.startPoint.toArray(), line.endPoint.toArray()]}
       color="sienna"
       lineWidth={2}
     />
