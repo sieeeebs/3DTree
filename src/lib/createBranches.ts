@@ -1,106 +1,76 @@
-// This function creates multiple children branches at a set degree from the parent
 import * as THREE from "three";
 
-const degreesToRadians = (degrees) =>
-  degrees * (Math.PI / 180);
+const ANGLE = {
+  left: { axis: new THREE.Vector3(1, 0, 0) },
+  right: { axis: new THREE.Vector3(-1, 0, 0) },
+  front: { axis: new THREE.Vector3(0, 0, 1) },
+  back: { axis: new THREE.Vector3(0, 0, -1) },
+};
 
-export default function createBranches({
+export default function test({
   points,
-  numPoints, // number of branches
-  direction, // 1 for right, -1 for left
+  direction,
+  vecDirection,
   degrees,
+  branchCounter,
+  maxBranches,
 }) {
   const start = points[0];
   const end = points[1];
   const lineLength = start.distanceTo(end);
+  const length = lineLength * 0.6; // Length of the new branch
+  const variationStrength = degrees / 2;
+  // const numPoints = maxBranches / depth + 1;
 
-  // Compute the direction of the parent branch
-  const parentDirection = new THREE.Vector3()
-    .subVectors(end, start)
-    .normalize();
+  // Parent direction (normalized)
+  const parentDirection = vecDirection
+    ? vecDirection.clone().normalize()
+    : end.clone().sub(start).normalize();
 
-  const rotationAngle =
-    -degreesToRadians(degrees) * direction;
+  const axis = ANGLE[direction].axis;
+  const rotationAngleRad = THREE.MathUtils.degToRad(degrees);
 
-  const rotationMatrix =
-    new THREE.Matrix4().makeRotationZ(
-      rotationAngle
-    );
+  const rotationAxis = new THREE.Vector3().crossVectors(parentDirection, axis).normalize();
 
-  const rotatedDirection = parentDirection
-    .clone()
-    .applyMatrix4(rotationMatrix)
-    .normalize();
-
-  // After rotation, ensure the vector points in the positive X direction for right side
-  if (direction === 1 && rotatedDirection.x < 0) {
-    rotatedDirection
-      .multiplyScalar(-1)
-      .normalize();
-  }
-  // After rotation, ensure the vector points in the negative X direction for left side
-  if (
-    direction === -1 &&
-    rotatedDirection.x > 0
-  ) {
-    rotatedDirection
-      .multiplyScalar(-1)
-      .normalize();
-  }
-
-  // Adjust the rotation angle to point upwards by flipping the direction to make Y positive
-  let upwardDirection;
-  if (rotatedDirection.y < 0) {
-    upwardDirection = parentDirection
-      .clone()
-      .applyMatrix4(
-        new THREE.Matrix4().makeRotationZ(
-          degreesToRadians(degrees) * direction // rotate in opposite direction
-        )
-      )
-      .normalize();
-  }
-
-  // Generate the new children branch points using the adjusted direction
   const newLinePoints = [];
-  for (let i = 1; i <= numPoints; i++) {
-    const t = 0.3 + Math.random() * 0.7; // Random t between 0.3 and 1
-    const pointOnLine =
-      new THREE.Vector3().lerpVectors(
-        start,
-        end,
-        t
-      );
-    let newEnd;
-    const length = lineLength * 0.6;
+  for (let i = 1; i <= 3; i++) {
+    // Pick a random point along the parent line
+    const t = 0.4 + Math.random() * 0.6;
+    const pointOnLine = new THREE.Vector3().lerpVectors(start, end, t);
 
-    if (upwardDirection) {
-      // randomly assign the direction (upwards or downwards)
-      newEnd = pointOnLine
-        .clone()
-        .add(
-          Math.random() < 0.5
-            ? rotatedDirection
-                .clone()
-                .multiplyScalar(length)
-            : upwardDirection
-                .clone()
-                .multiplyScalar(length)
-        );
-    } else {
-      newEnd = pointOnLine
-        .clone()
-        .add(
-          rotatedDirection
-            .clone()
-            .multiplyScalar(length)
-        );
+    // Alternate rotation direction based on index
+    const adjustedRotationAngleRad = i % 2 === 0 ? -rotationAngleRad : rotationAngleRad;
+
+    // First rotation: Apply the main rotation
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromAxisAngle(rotationAxis, adjustedRotationAngleRad);
+    const rotatedDirection = parentDirection.clone().applyQuaternion(quaternion).normalize();
+
+    // Ensure variation but keep direction aligned with parent’s endpoint
+
+    const variationAxis = new THREE.Vector3()
+      .crossVectors(rotationAxis, parentDirection)
+      .normalize();
+
+    if (variationAxis.lengthSq() === 0) {
+      variationAxis.copy(new THREE.Vector3(0, 1, 0)); // Fallback
     }
+
+    const randomAngleRad = THREE.MathUtils.degToRad((Math.random() - 0.5) * variationStrength * 2);
+    const variationQuaternion = new THREE.Quaternion();
+    variationQuaternion.setFromAxisAngle(variationAxis, randomAngleRad);
+    rotatedDirection.applyQuaternion(variationQuaternion).normalize();
+
+    // Compute the new endpoint
+    const newEnd = pointOnLine.clone().addScaledVector(rotatedDirection, length);
 
     newLinePoints.push({
       startPoint: pointOnLine,
       endPoint: newEnd,
+      vecDirection: rotatedDirection,
     });
+    branchCounter.current.count += 1;
+    if (branchCounter.current.count > maxBranches - 1) return newLinePoints;
   }
 
   return newLinePoints;

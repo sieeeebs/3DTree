@@ -1,6 +1,5 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, GizmoHelper, GizmoViewport } from "@react-three/drei";
-
 import Tree from "./components/Tree";
 
 export default function App() {
@@ -22,7 +21,6 @@ export default function App() {
         </GizmoHelper>
         <OrbitControls makeDefault />
       </Canvas>
-      <button>hello</button>
     </div>
   );
 }
